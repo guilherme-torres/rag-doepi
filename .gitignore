@@ -1,0 +1,6 @@
+.venv
+.env
+temp
+*.pdf
+prompts
+__pycache__
