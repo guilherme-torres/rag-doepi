@@ -4,6 +4,7 @@ import redis
 from dotenv import load_dotenv
 from google import genai
 from PyPDF2 import PdfReader
+from flask import Flask, render_template
 
 
 load_dotenv()
@@ -15,22 +16,24 @@ r = redis.Redis(
     decode_responses=True
 )
 
+download_dir = "temp"
+
 def download_last_doe(chunk_size=8192) -> str:
     try:
-        download_dir = "temp"
         if not os.path.exists(download_dir):
             os.mkdir(download_dir)
         response = requests.get("https://www.diario.pi.gov.br/doe/mobile/listardoe.json")
         response.raise_for_status()
         ultimo_doe = response.json()["dados"][0]
         filename = f"DOEPI_{ultimo_doe["numero"]}_{ultimo_doe["ano"]}.pdf"
-        if os.path.exists(f"{download_dir}/{filename}"):
+        file_path = os.path.join(download_dir, filename)
+        if os.path.exists(file_path):
             print(f"o último DOE já foi baixado: {filename}")
             return filename
         print("baixando último DOE...")
         response = requests.get(ultimo_doe["link"], stream=True)
         response.raise_for_status()
-        with open(f"{download_dir}/{filename}", 'wb') as pdf_doe:
+        with open(file_path, 'wb') as pdf_doe:
             for chunk in response.iter_content(chunk_size):
                 pdf_doe.write(chunk)
         return filename
@@ -48,7 +51,8 @@ def load_pdf(filename: str) -> str:
             return texto_em_cache
         print("texto não encontrado em cache. Extraindo texto do pdf...")
         raw_text = ""
-        pdfreader = PdfReader(filename)
+        file_path = os.path.join(download_dir, filename)
+        pdfreader = PdfReader(file_path)
         total_paginas = len(pdfreader.pages)
         for i, page in enumerate(pdfreader.pages[2:-1]):
             print(f"extraindo texto da página {i+1}/{total_paginas}")
@@ -62,9 +66,6 @@ def load_pdf(filename: str) -> str:
     except Exception as e:
         print(f"erro ao extrair texto do arquivo {filename}: {e}")
 
-
-filename = download_last_doe()
-pdf_text = load_pdf(filename)
 
 client = genai.Client()
 
@@ -105,6 +106,28 @@ def generate_answer(prompt: str):
     return result.text
 
 
-prompt = make_rag_prompt(pdf_text)
-llm_response = generate_answer(prompt)
-print(llm_response)
+# filename = download_last_doe()
+# pdf_text = load_pdf(filename)
+# prompt = make_rag_prompt(pdf_text)
+# ai_response = generate_answer(prompt)
+# print(ai_response)
+
+app = Flask(__name__)
+
+@app.route("/ping")
+def root():
+    return "pong"
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+@app.route("/last-doe", methods=["POST"])
+def analyze_last_doe():
+    filename = download_last_doe()
+    pdf_text = load_pdf(filename)
+    # prompt = make_rag_prompt(pdf_text)
+    # ai_response = generate_answer(prompt)
+    return {"response": "resposta do modelo aqui"}
