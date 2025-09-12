@@ -4,7 +4,8 @@ import redis
 from dotenv import load_dotenv
 from google import genai
 from PyPDF2 import PdfReader
-from flask import Flask, render_template
+from flask import Flask
+from flask_cors import CORS
 
 
 load_dotenv()
@@ -18,13 +19,21 @@ r = redis.Redis(
 
 download_dir = "temp"
 
+def search_last_doe() -> dict:
+    try:
+        response = requests.get("https://www.diario.pi.gov.br/doe/mobile/listardoe.json")
+        response.raise_for_status()
+        ultimo_doe = response.json()["dados"][0]
+        return ultimo_doe
+    except requests.exceptions.RequestException as e:
+        print(f"Erro ao baixar arquivo: {e}")
+
+
 def download_last_doe(chunk_size=8192) -> str:
     try:
         if not os.path.exists(download_dir):
             os.mkdir(download_dir)
-        response = requests.get("https://www.diario.pi.gov.br/doe/mobile/listardoe.json")
-        response.raise_for_status()
-        ultimo_doe = response.json()["dados"][0]
+        ultimo_doe = search_last_doe()
         filename = f"DOEPI_{ultimo_doe["numero"]}_{ultimo_doe["ano"]}.pdf"
         file_path = os.path.join(download_dir, filename)
         if os.path.exists(file_path):
@@ -106,28 +115,23 @@ def generate_answer(prompt: str):
     return result.text
 
 
-# filename = download_last_doe()
-# pdf_text = load_pdf(filename)
-# prompt = make_rag_prompt(pdf_text)
-# ai_response = generate_answer(prompt)
-# print(ai_response)
-
 app = Flask(__name__)
+CORS(app)
 
 @app.route("/ping")
 def root():
     return "pong"
 
 
-@app.route("/")
-def index():
-    return render_template("index.html")
+@app.route("/fetch-last-doe", methods=["POST"])
+def fetch_last_doe():
+    return search_last_doe()
 
 
-@app.route("/last-doe", methods=["POST"])
+@app.route("/analyze-last-doe", methods=["POST"])
 def analyze_last_doe():
     filename = download_last_doe()
     pdf_text = load_pdf(filename)
-    # prompt = make_rag_prompt(pdf_text)
-    # ai_response = generate_answer(prompt)
-    return {"response": "resposta do modelo aqui"}
+    prompt = make_rag_prompt(pdf_text)
+    ai_response = generate_answer(prompt)
+    return {"response": ai_response}
