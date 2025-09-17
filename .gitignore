@@ -5,3 +5,4 @@ temp
 *.pdf
 prompts
 __pycache__
+*.db
