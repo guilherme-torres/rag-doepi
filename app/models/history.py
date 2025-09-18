@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Text
 from app.database.db import Base
 
 
@@ -8,7 +8,7 @@ class History(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"))
-    ai_response: Mapped[str]
+    ai_response: Mapped[str] = mapped_column(Text)
 
     document: Mapped["Document"] = relationship(back_populates="histories")
 

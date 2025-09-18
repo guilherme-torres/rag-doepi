@@ -10,3 +10,7 @@ class Config(BaseSettings):
     AI_MODEL: str
     SHEETS_URL: str
     DOEPI_ENDPOINT: str
+    DOWNLOAD_DIR: str
+    REDIS_HOST: str
+    REDIS_PORT: str
+    REDIS_PASSWORD: str
