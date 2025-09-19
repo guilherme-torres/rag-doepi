@@ -16,7 +16,7 @@ class HistoryService:
         return [HistoryResponse.model_validate(history) for history in histories]
 
     def get_by_document_id(self, document_id: int) -> Optional[HistoryResponse]:
-        history = self.history_repository.get_by_document_id(document_id)
+        history = self.history_repository.find_one({"document_id": document_id})
         if history is None:
             return None
         return HistoryResponse.model_validate(history)

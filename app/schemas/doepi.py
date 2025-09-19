@@ -6,6 +6,7 @@ class DOEPIResponse(BaseModel):
     tipo: str
     numero: int
     ano: int
+    dia: str
     referencia: str
     link: str
 

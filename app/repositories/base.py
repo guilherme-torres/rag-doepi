@@ -1,3 +1,4 @@
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from typing import List, Optional, Generic, TypeVar, Type
 
@@ -42,3 +43,6 @@ class BaseRepository(Generic[ModelType]):
         self.session.delete(obj)
         self.session.commit()
         return True
+    
+    def find_one(self, filter_dict: dict) -> Optional[ModelType]:
+        return self.session.scalars(select(self.model).filter_by(**filter_dict)).first()

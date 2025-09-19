@@ -8,7 +8,13 @@ class DocumentService:
         self.document_repository = document_repository
 
     def get_by_filename(self, filename: str) -> Optional[DocumentResponse]:
-        document = self.document_repository.get_by_filename(filename)
+        document = self.document_repository.find_one({"filename": filename})
+        if document is None:
+            return None
+        return DocumentResponse.model_validate(document)
+    
+    def get_by_ref(self, ref: str) -> Optional[DocumentResponse]:
+        document = self.document_repository.find_one({"ref": ref})
         if document is None:
             return None
         return DocumentResponse.model_validate(document)

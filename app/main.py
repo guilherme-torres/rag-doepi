@@ -61,15 +61,15 @@ def list_doepi(doepi_service: DOEPIService = Depends(get_doepi_service)):
 
 
 @app.post("/doepi/analyze", response_model=RAGResponse)
-def analyze_doe(document: str, doepi_service: DOEPIService = Depends(get_doepi_service)):
-    doe_cache = r.get(document)
+def analyze_doe(ref: str, doepi_service: DOEPIService = Depends(get_doepi_service)):
+    doe_cache = r.get(ref)
     if doe_cache:
         doe = DOEPIResponse.model_validate_json(doe_cache)
         result = doepi_service.analyze_doe(doe)
         return result
-    doe = doepi_service.search_doe(document)
+    doe = doepi_service.search_doe(ref)
     if doe is None:
-        raise HTTPException(status_code=404, detail=f"DOE não encontrado: {document}")
-    r.set(document, doe.model_dump_json())
+        raise HTTPException(status_code=404, detail=f"DOE não encontrado: {ref}")
+    r.set(ref, doe.model_dump_json())
     result = doepi_service.analyze_doe(doe)
     return result

@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 from typing import List, Optional
 import requests
@@ -38,12 +39,9 @@ class DOEPIService:
         ultimo_doe = list_doe[0]
         return ultimo_doe
 
-    def search_doe(self, document: str) -> Optional[DOEPIResponse]:
+    def search_doe(self, ref: str) -> Optional[DOEPIResponse]:
         list_doe = self.list_doe()
-        parts = document.split("_")
-        ano = int(parts[2])
-        numero = int(parts[1])
-        doe_found = [doe for doe in list_doe if doe.numero == numero and doe.ano == ano]
+        doe_found = [doe for doe in list_doe if doe.referencia == ref]
         if len(doe_found) == 0:
             return None
         return doe_found[0]
@@ -70,7 +68,7 @@ class DOEPIService:
 
     def analyze_doe(self, doe: DOEPIResponse) -> RAGResponse:
         filename = self.download_doe(doe)
-        document_exist = self.document_service.get_by_filename(filename)
+        document_exist = self.document_service.get_by_ref(doe.referencia)
         file_path = os.path.join(self.config.DOWNLOAD_DIR, filename)
         if document_exist:
             # apaga o arquivo baixado se o documento já foi salvo no BD
@@ -81,11 +79,23 @@ class DOEPIService:
                 return RAGResponse(response=history_exist.ai_response)
             prompt = self.rag_service.make_rag_prompt(document_exist.text)
             ai_response = self.rag_service.generate_answer(prompt)
+            self.history_service.create_history(HistoryCreate(
+                document_id=document_exist.id,
+                ai_response=ai_response,
+            ))
             return RAGResponse(response=ai_response)
+            # return RAGResponse(response="resposta do modelo")
         
         pdf_text = self.rag_service.load_pdf(filename=filename)
         document = self.document_service.create_document(DocumentCreate(
-            text=pdf_text, filename=filename
+            text=pdf_text,
+            filename=filename,
+            tipo=doe.tipo,
+            ref=doe.referencia,
+            dia=datetime.strptime(doe.dia, "%Y-%m-%d").date(),
+            number=doe.numero,
+            year=doe.ano,
+            link=doe.link,
         ))
         # apaga o arquivo baixado após salvar o documento no BD
         if os.path.exists(file_path):
@@ -97,6 +107,7 @@ class DOEPIService:
             ai_response=ai_response,
         ))
         return RAGResponse(response=ai_response)
+        # return RAGResponse(response="resposta do modelo")
 
     def analyze_last_doe(self) -> RAGResponse:
         last_doe = self.get_last_doe()
