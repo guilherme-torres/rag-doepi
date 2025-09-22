@@ -10,6 +10,9 @@ class BaseRepository(Generic[ModelType]):
         self.model = model
         self.session = session
 
+    def count(self) -> int:
+        return self.session.query(self.model).count()
+
     def get(self, id: int) -> Optional[ModelType]:
         return self.session.get(self.model, id)
 

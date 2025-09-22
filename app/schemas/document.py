@@ -21,3 +21,15 @@ class DocumentResponse(DocumentBase):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class DocumentResponseHistory(BaseModel):
+    id: int
+    tipo: str
+    ref: str
+    dia: date
+    number: int
+    year: int
+    link: str
+
+    model_config = ConfigDict(from_attributes=True)

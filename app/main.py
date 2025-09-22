@@ -1,12 +1,14 @@
 import json
 from typing import List
+from app.schemas.history import HistoryResponsePaginated
+from app.services.history import HistoryService
 import redis
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from app.schemas.rag import RAGResponse
 from app.services.doepi import DOEPIService
 from app.database.db import Base, engine
-from app.dependencies import get_doepi_service
+from app.dependencies import get_doepi_service, get_history_service
 from app.schemas.doepi import DOEPIResponse, DOEPIResponseList
 from app.config import Config
 
@@ -73,3 +75,12 @@ def analyze_doe(ref: str, doepi_service: DOEPIService = Depends(get_doepi_servic
     r.set(ref, doe.model_dump_json())
     result = doepi_service.analyze_doe(doe)
     return result
+
+
+@app.get("/history", response_model=HistoryResponsePaginated)
+def list_history(
+    limit: int = 10,
+    skip: int = 0,
+    history_service: HistoryService = Depends(get_history_service)
+):
+    return history_service.list_history(limit=limit, skip=skip)

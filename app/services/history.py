@@ -1,6 +1,6 @@
 from typing import List, Optional
 from app.repositories.history import HistoryRepository
-from app.schemas.history import HistoryCreate, HistoryResponse
+from app.schemas.history import HistoryCreate, HistoryResponse, HistoryResponsePaginated
 
 
 class HistoryService:
@@ -11,9 +11,16 @@ class HistoryService:
         history = self.history_repository.create(history.model_dump())
         return HistoryResponse.model_validate(history)
 
-    def list_history(self, skip: int = 0, limit: int = 100) -> List[HistoryResponse]:
+    def list_history(self, skip: int = 0, limit: int = 100) -> HistoryResponsePaginated:
         histories = self.history_repository.get_all(skip=skip, limit=limit)
-        return [HistoryResponse.model_validate(history) for history in histories]
+        total = self.history_repository.count()
+        history_data = [HistoryResponse.model_validate(history) for history in histories]
+        return HistoryResponsePaginated(
+            total=total,
+            limit=limit,
+            skip=skip,
+            data=history_data,
+        )
 
     def get_by_document_id(self, document_id: int) -> Optional[HistoryResponse]:
         history = self.history_repository.find_one({"document_id": document_id})
