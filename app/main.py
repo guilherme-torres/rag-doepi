@@ -1,5 +1,6 @@
+from datetime import date
 import json
-from typing import List
+from typing import List, Optional
 from app.schemas.history import HistoryResponsePaginated
 from app.services.history import HistoryService
 import redis
@@ -81,6 +82,13 @@ def analyze_doe(ref: str, model: str, doepi_service: DOEPIService = Depends(get_
 def list_history(
     limit: int = 10,
     skip: int = 0,
+    edicao_doe: Optional[date] = None,
+    numero_doe: Optional[int] = None,
     history_service: HistoryService = Depends(get_history_service)
 ):
-    return history_service.list_history(limit=limit, skip=skip)
+    filter_dict = dict()
+    if edicao_doe:
+        filter_dict["dia"] = edicao_doe
+    if numero_doe:
+        filter_dict["number"] = numero_doe
+    return history_service.list_history(limit=limit, skip=skip, filter_by=filter_dict)

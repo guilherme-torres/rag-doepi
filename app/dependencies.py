@@ -18,8 +18,11 @@ def get_history_repository(session: Session = Depends(get_db_session)):
 def get_document_service(document_repository: DocumentRepository = Depends(get_document_repository)):
     return DocumentService(document_repository)
 
-def get_history_service(history_repository: HistoryRepository = Depends(get_history_repository)):
-    return HistoryService(history_repository)
+def get_history_service(
+    history_repository: HistoryRepository = Depends(get_history_repository),
+    document_repository: DocumentRepository = Depends(get_document_repository),
+):
+    return HistoryService(history_repository, document_repository)
 
 def get_rag_service():
     return RAGService()
