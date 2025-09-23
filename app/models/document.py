@@ -21,4 +21,7 @@ class Document(Base):
     histories: Mapped[List["History"]] = relationship(back_populates="document")
 
     def __repr__(self):
-        return f"Document(id={self.id}, filename={self.filename})"
+        return (
+            f"Document(id={self.id}, filename={self.filename}, tipo={self.tipo}, ref={self.ref},",
+            f"dia={self.dia}, number={self.number}, year={self.year}, link={self.link})"
+        )

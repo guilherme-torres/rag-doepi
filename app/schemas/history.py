@@ -6,6 +6,7 @@ from app.schemas.document import DocumentResponseHistory
 class HistoryBase(BaseModel):
     document_id: int
     ai_response: str
+    ai_model: str
 
 
 class HistoryCreate(HistoryBase):

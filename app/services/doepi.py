@@ -66,7 +66,7 @@ class DOEPIService:
             print(f"Erro ao salvar arquivo: {e}")
             raise
 
-    def analyze_doe(self, doe: DOEPIResponse) -> RAGResponse:
+    def analyze_doe(self, doe: DOEPIResponse, model: str) -> RAGResponse:
         filename = self.download_doe(doe)
         document_exist = self.document_service.get_by_ref(doe.referencia)
         file_path = os.path.join(self.config.DOWNLOAD_DIR, filename)
@@ -74,14 +74,18 @@ class DOEPIService:
             # apaga o arquivo baixado se o documento já foi salvo no BD
             if os.path.exists(file_path):
                 os.remove(file_path)
-            history_exist = self.history_service.get_by_document_id(document_exist.id)
+            history_exist = self.history_service.find_history({
+                "document_id": document_exist.id,
+                "ai_model": model,
+            })
             if history_exist:
                 return RAGResponse(response=history_exist.ai_response)
             prompt = self.rag_service.make_rag_prompt(document_exist.text)
-            ai_response = self.rag_service.generate_answer(prompt)
+            ai_response = self.rag_service.generate_answer(model, prompt)
             self.history_service.create_history(HistoryCreate(
                 document_id=document_exist.id,
                 ai_response=ai_response,
+                ai_model=model,
             ))
             return RAGResponse(response=ai_response)
             # return RAGResponse(response="resposta do modelo")
@@ -101,14 +105,15 @@ class DOEPIService:
         if os.path.exists(file_path):
             os.remove(file_path)
         prompt = self.rag_service.make_rag_prompt(pdf_text)
-        ai_response = self.rag_service.generate_answer(prompt)
+        ai_response = self.rag_service.generate_answer(model, prompt)
         self.history_service.create_history(HistoryCreate(
             document_id=document.id,
             ai_response=ai_response,
+            ai_model=model,
         ))
         return RAGResponse(response=ai_response)
         # return RAGResponse(response="resposta do modelo")
 
-    def analyze_last_doe(self) -> RAGResponse:
+    def analyze_last_doe(self, model: str) -> RAGResponse:
         last_doe = self.get_last_doe()
-        return self.analyze_doe(last_doe)
+        return self.analyze_doe(last_doe, model)

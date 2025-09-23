@@ -42,8 +42,8 @@ def fetch_last_doe(doepi_service: DOEPIService = Depends(get_doepi_service)):
 
 
 @app.post("/doepi/last/analyze", response_model=RAGResponse)
-def analyze_last_doe(doepi_service: DOEPIService = Depends(get_doepi_service)):
-    return doepi_service.analyze_last_doe()
+def analyze_last_doe(model: str, doepi_service: DOEPIService = Depends(get_doepi_service)):
+    return doepi_service.analyze_last_doe(model)
 
 
 @app.get("/doepi", response_model=DOEPIResponseList)
@@ -63,17 +63,17 @@ def list_doepi(doepi_service: DOEPIService = Depends(get_doepi_service)):
 
 
 @app.post("/doepi/analyze", response_model=RAGResponse)
-def analyze_doe(ref: str, doepi_service: DOEPIService = Depends(get_doepi_service)):
+def analyze_doe(ref: str, model: str, doepi_service: DOEPIService = Depends(get_doepi_service)):
     doe_cache = r.get(ref)
     if doe_cache:
         doe = DOEPIResponse.model_validate_json(doe_cache)
-        result = doepi_service.analyze_doe(doe)
+        result = doepi_service.analyze_doe(doe, model)
         return result
     doe = doepi_service.search_doe(ref)
     if doe is None:
         raise HTTPException(status_code=404, detail=f"DOE não encontrado: {ref}")
     r.set(ref, doe.model_dump_json())
-    result = doepi_service.analyze_doe(doe)
+    result = doepi_service.analyze_doe(doe, model)
     return result
 
 

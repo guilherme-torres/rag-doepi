@@ -46,8 +46,8 @@ Este Diário Oficial alterou algum dos atos compilados referidos na tabela? Se S
         """
         return prompt
     
-    def generate_answer(self, prompt: str) -> Optional[str]:
+    def generate_answer(self, model: str, prompt: str) -> Optional[str]:
         result = self.client.models.generate_content(
-            model=self.config.AI_MODEL, contents=prompt
+            model=model, contents=prompt
         )
         return result.text
