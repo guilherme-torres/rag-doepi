@@ -20,13 +20,12 @@ class HistoryService:
         filter_by: Optional[Dict[str, Any]] = None,
         order_by: Optional[Dict[str, str]] = None
     ) -> HistoryResponsePaginated:
-        histories = self.history_repository.get_all_with_filters(
+        histories, total = self.history_repository.get_all_with_filters(
             skip=skip,
             limit=limit,
             filter_by=filter_by,
             order_by=order_by,
         )
-        total = self.history_repository.count()
         history_data = [HistoryResponse.model_validate(history) for history in histories]
         return HistoryResponsePaginated(
             total=total,

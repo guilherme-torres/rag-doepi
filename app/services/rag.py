@@ -28,10 +28,20 @@ class RAGService:
         except Exception as e:
             print(f"erro ao extrair texto do arquivo {filename}: {e}")
 
-    def make_rag_prompt(self, text: str) -> str:
+    def make_rag_prompt(self, text: Optional[str] = None) -> str:
         df = pd.read_csv(self.config.SHEETS_URL)
         atos_compilados = df["Nº da Lei/ Decreto"].values
         prompt = f"""
+Este Diário Oficial alterou algum dos atos compilados referidos na tabela? Se Sim, quais?
+
+### Entrada:
+
+**Lista de Atos Compilados:**
+{"\n".join([f"- {ato_compilado}" for ato_compilado in atos_compilados])}
+```
+        """
+        if text is not None:
+            prompt = f"""
 Este Diário Oficial alterou algum dos atos compilados referidos na tabela? Se Sim, quais?
 
 ### Entrada:
@@ -43,10 +53,17 @@ Este Diário Oficial alterou algum dos atos compilados referidos na tabela? Se S
 ```
 {text}
 ```
-        """
+            """
         return prompt
     
-    def generate_answer(self, model: str, prompt: str) -> Optional[str]:
+    def generate_answer(self, model: str, prompt: str, file_path: Optional[str] = None) -> Optional[str]:
+        if file_path is not None:
+            pdf_document = self.client.files.upload(file=file_path)
+            result = self.client.models.generate_content(
+                model=model, contents=[prompt, pdf_document]
+            )
+            self.client.files.delete(name=pdf_document.name)
+            return result.text
         result = self.client.models.generate_content(
             model=model, contents=prompt
         )

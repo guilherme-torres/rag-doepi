@@ -2,10 +2,34 @@ services:
   redis:
     image: redis:8.2-alpine
     command: redis-server --requirepass ${REDIS_PASSWORD}
+    container_name: redis
     ports:
       - "6379:6379"
     volumes:
       - redis-cache:/data
+    networks:
+      - redis-net
+
+  backend:
+    build: .
+    container_name: backend
+    entrypoint: ["tail", "-f", "/dev/null"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./app:/code/app
+      - ./temp:/code/temp
+    depends_on:
+      - redis
+    networks:
+      - redis-net
+      - pge
 
 volumes:
   redis-cache:
+
+networks:
+  redis-net:
+  pge:
+    driver: bridge
+    external: true

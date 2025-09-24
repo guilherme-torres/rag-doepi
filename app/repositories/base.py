@@ -1,4 +1,3 @@
-from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from typing import Any, Dict, List, Optional, Generic, TypeVar, Type

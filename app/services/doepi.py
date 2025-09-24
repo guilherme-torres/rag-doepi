@@ -72,27 +72,30 @@ class DOEPIService:
         file_path = os.path.join(self.config.DOWNLOAD_DIR, filename)
         if document_exist:
             # apaga o arquivo baixado se o documento já foi salvo no BD
-            if os.path.exists(file_path):
-                os.remove(file_path)
+            # if os.path.exists(file_path):
+            #     os.remove(file_path)
             history_exist = self.history_service.find_history({
                 "document_id": document_exist.id,
                 "ai_model": model,
             })
             if history_exist:
                 return RAGResponse(response=history_exist.ai_response)
-            prompt = self.rag_service.make_rag_prompt(document_exist.text)
-            ai_response = self.rag_service.generate_answer(model, prompt)
+            prompt = self.rag_service.make_rag_prompt()
+            ai_response = self.rag_service.generate_answer(model, prompt, file_path=file_path)
             self.history_service.create_history(HistoryCreate(
                 document_id=document_exist.id,
                 ai_response=ai_response,
                 ai_model=model,
             ))
+            if os.path.exists(file_path):
+                print("apagando arquivo", file_path)
+                os.remove(file_path)
             return RAGResponse(response=ai_response)
-            # return RAGResponse(response="resposta do modelo")
         
-        pdf_text = self.rag_service.load_pdf(filename=filename)
+        # pdf_text = self.rag_service.load_pdf(filename=filename)
         document = self.document_service.create_document(DocumentCreate(
-            text=pdf_text,
+            # text=pdf_text,
+            text="pdf_text",
             filename=filename,
             tipo=doe.tipo,
             ref=doe.referencia,
@@ -102,17 +105,19 @@ class DOEPIService:
             link=doe.link,
         ))
         # apaga o arquivo baixado após salvar o documento no BD
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        prompt = self.rag_service.make_rag_prompt(pdf_text)
-        ai_response = self.rag_service.generate_answer(model, prompt)
+        # if os.path.exists(file_path):
+        #     os.remove(file_path)
+        prompt = self.rag_service.make_rag_prompt()
+        ai_response = self.rag_service.generate_answer(model, prompt, file_path=file_path)
         self.history_service.create_history(HistoryCreate(
             document_id=document.id,
             ai_response=ai_response,
             ai_model=model,
         ))
+        if os.path.exists(file_path):
+            print("apagando arquivo", file_path)
+            os.remove(file_path)
         return RAGResponse(response=ai_response)
-        # return RAGResponse(response="resposta do modelo")
 
     def analyze_last_doe(self, model: str) -> RAGResponse:
         last_doe = self.get_last_doe()
