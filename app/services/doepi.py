@@ -85,13 +85,13 @@ class DOEPIService:
         file_path = os.path.join(self.config.DOWNLOAD_DIR, filename)
         if document_exist:
             # apaga o arquivo baixado se o documento já foi salvo no BD
-            if os.path.exists(file_path):
-                os.remove(file_path)
             history_exist = self.history_service.find_history({
                 "document_id": document_exist.id,
                 "ai_model": model,
             })
             if history_exist:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
                 return RAGResponse(response=history_exist.ai_response)
             prompt = self.rag_service.make_rag_prompt()
             ai_response = self.rag_service.generate_answer(model, prompt, file_path=file_path)
