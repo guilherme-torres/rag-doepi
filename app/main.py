@@ -10,7 +10,7 @@ from app.schemas.rag import RAGResponse
 from app.services.doepi import DOEPIService
 from app.database.db import Base, engine
 from app.dependencies import get_doepi_service, get_history_service
-from app.schemas.doepi import DOEPIResponse, DOEPIResponseList
+from app.schemas.doepi import DOEPIResponse, DOEPIResponseLabelValue, DOEPIResponseLabelValueList, DOEPIResponseList
 from app.config import Config
 
 Base.metadata.create_all(engine)
@@ -47,20 +47,18 @@ def analyze_last_doe(model: str, doepi_service: DOEPIService = Depends(get_doepi
     return doepi_service.analyze_last_doe(model)
 
 
-@app.get("/doepi", response_model=DOEPIResponseList)
+@app.get("/doepi", response_model=DOEPIResponseLabelValueList)
 def list_doepi(doepi_service: DOEPIService = Depends(get_doepi_service)):
     list_doe_cache = r.get("list_doepi")
     if list_doe_cache:
-        print("resposta recuperada do cache")
         list_doe_obj = json.loads(list_doe_cache)
-        list_doe = [DOEPIResponse.model_validate(doe_obj) for doe_obj in list_doe_obj]
-        return DOEPIResponseList(data=list_doe)
-    print("resposta não encontrada no cache")
-    list_doe = doepi_service.list_doe()
+        list_doe = [DOEPIResponseLabelValue.model_validate(doe_obj) for doe_obj in list_doe_obj]
+        return DOEPIResponseLabelValueList(data=list_doe)
+    list_doe = doepi_service.list_doe_label_value()
     list_doe_json_str = json.dumps([doe.model_dump() for doe in list_doe])
     # salva a resposta em cache por 12 horas
     r.set("list_doepi", list_doe_json_str, ex=43200)
-    return DOEPIResponseList(data=list_doe)
+    return DOEPIResponseLabelValueList(data=list_doe)
 
 
 @app.post("/doepi/analyze", response_model=RAGResponse)

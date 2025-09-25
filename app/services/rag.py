@@ -13,13 +13,13 @@ class RAGService:
 
     def load_pdf(self, filename: str) -> str:
         try:
-            print(f"iniciando extração do texto de {filename}")
+            # print(f"iniciando extração do texto de {filename}")
             raw_text = ""
             file_path = os.path.join(self.config.DOWNLOAD_DIR, filename)
             pdfreader = PdfReader(file_path)
-            total_paginas = len(pdfreader.pages)
+            # total_paginas = len(pdfreader.pages)
             for i, page in enumerate(pdfreader.pages[2:-1]):
-                print(f"extraindo texto da página {i+1}/{total_paginas}")
+                # print(f"extraindo texto da página {i+1}/{total_paginas}")
                 content = page.extract_text()
                 if content:
                     raw_text += content

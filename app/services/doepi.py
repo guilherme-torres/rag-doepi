@@ -4,12 +4,13 @@ from typing import List, Optional
 import requests
 from app.config import Config
 from app.schemas.document import DocumentCreate
-from app.schemas.doepi import DOEPIResponse
+from app.schemas.doepi import DOEPIResponse, DOEPIResponseLabelValue
 from app.schemas.history import HistoryCreate
 from app.schemas.rag import RAGResponse
 from app.services.document import DocumentService
 from app.services.history import HistoryService
 from app.services.rag import RAGService
+from app.utils.format_date import format_date
 
 
 class DOEPIService:
@@ -34,6 +35,19 @@ class DOEPIService:
             print(f"Erro ao consultar API: {e}")
             raise
 
+    def list_doe_label_value(self) -> List[DOEPIResponseLabelValue]:
+        try:
+            list_doe = self.list_doe()
+            return [
+                DOEPIResponseLabelValue(
+                    label=f"DOEPI_{doe.numero}_{doe.ano} - {format_date(doe.dia)} ({doe.tipo})",
+                    value=doe.referencia
+                ) for doe in list_doe
+            ]
+        except requests.exceptions.RequestException as e:
+            print(f"Erro ao consultar API: {e}")
+            raise
+
     def get_last_doe(self) -> DOEPIResponse:
         list_doe = self.list_doe()
         ultimo_doe = list_doe[0]
@@ -52,7 +66,6 @@ class DOEPIService:
                 os.mkdir(self.config.DOWNLOAD_DIR)
             filename = f"DOEPI_{doe.numero}_{doe.ano}.pdf"
             file_path = os.path.join(self.config.DOWNLOAD_DIR, filename)
-            print("baixando DOE...")
             response = requests.get(doe.link, stream=True)
             response.raise_for_status()
             with open(file_path, 'wb') as pdf_doe:
@@ -72,8 +85,8 @@ class DOEPIService:
         file_path = os.path.join(self.config.DOWNLOAD_DIR, filename)
         if document_exist:
             # apaga o arquivo baixado se o documento já foi salvo no BD
-            # if os.path.exists(file_path):
-            #     os.remove(file_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
             history_exist = self.history_service.find_history({
                 "document_id": document_exist.id,
                 "ai_model": model,
@@ -88,7 +101,6 @@ class DOEPIService:
                 ai_model=model,
             ))
             if os.path.exists(file_path):
-                print("apagando arquivo", file_path)
                 os.remove(file_path)
             return RAGResponse(response=ai_response)
         
@@ -115,7 +127,6 @@ class DOEPIService:
             ai_model=model,
         ))
         if os.path.exists(file_path):
-            print("apagando arquivo", file_path)
             os.remove(file_path)
         return RAGResponse(response=ai_response)
 

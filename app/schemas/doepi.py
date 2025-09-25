@@ -10,5 +10,12 @@ class DOEPIResponse(BaseModel):
     referencia: str
     link: str
 
+class DOEPIResponseLabelValue(BaseModel):
+    label: str
+    value: str
+
 class DOEPIResponseList(BaseModel):
     data: List[DOEPIResponse]
+
+class DOEPIResponseLabelValueList(BaseModel):
+    data: List[DOEPIResponseLabelValue]
