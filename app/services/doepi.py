@@ -3,6 +3,7 @@ import os
 from typing import List, Optional
 import requests
 from app.config import Config
+from app.exceptions import ApplicationException
 from app.schemas.document import DocumentCreate
 from app.schemas.doepi import DOEPIResponse, DOEPIResponseLabelValue
 from app.schemas.history import HistoryCreate
@@ -33,7 +34,7 @@ class DOEPIService:
             return [DOEPIResponse(**doe) for doe in list_doe]
         except requests.exceptions.RequestException as e:
             print(f"Erro ao consultar API: {e}")
-            raise
+            raise ApplicationException
 
     def list_doe_label_value(self) -> List[DOEPIResponseLabelValue]:
         try:
@@ -46,7 +47,7 @@ class DOEPIService:
             ]
         except requests.exceptions.RequestException as e:
             print(f"Erro ao consultar API: {e}")
-            raise
+            raise ApplicationException
 
     def get_last_doe(self) -> DOEPIResponse:
         list_doe = self.list_doe()
@@ -74,61 +75,65 @@ class DOEPIService:
             return filename
         except requests.exceptions.RequestException as e:
             print(f"Erro ao baixar arquivo: {e}")
-            raise
+            raise ApplicationException
         except IOError as e:
             print(f"Erro ao salvar arquivo: {e}")
-            raise
+            raise ApplicationException
+        except Exception as e:
+            raise ApplicationException
 
     def analyze_doe(self, doe: DOEPIResponse, model: str) -> RAGResponse:
-        filename = self.download_doe(doe)
-        document_exist = self.document_service.get_by_ref(doe.referencia)
-        file_path = os.path.join(self.config.DOWNLOAD_DIR, filename)
-        if document_exist:
-            # apaga o arquivo baixado se o documento já foi salvo no BD
-            history_exist = self.history_service.find_history({
-                "document_id": document_exist.id,
-                "ai_model": model,
-            })
-            if history_exist:
+        try:
+            filename = self.download_doe(doe)
+            document_exist = self.document_service.get_by_ref(doe.referencia)
+            file_path = os.path.join(self.config.DOWNLOAD_DIR, filename)
+            if document_exist:
+                history_exist = self.history_service.find_history({
+                    "document_id": document_exist.id,
+                    "ai_model": model,
+                })
+                if history_exist:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                    return RAGResponse(response=history_exist.ai_response)
+                prompt = self.rag_service.make_rag_prompt()
+                ai_response = self.rag_service.generate_answer(model, prompt, file_path=file_path)
+                self.history_service.create_history(HistoryCreate(
+                    document_id=document_exist.id,
+                    ai_response=ai_response,
+                    ai_model=model,
+                ))
                 if os.path.exists(file_path):
                     os.remove(file_path)
-                return RAGResponse(response=history_exist.ai_response)
+                return RAGResponse(response=ai_response)
+            
+            # pdf_text = self.rag_service.load_pdf(filename=filename)
+            document = self.document_service.create_document(DocumentCreate(
+                # text=pdf_text,
+                text="pdf_text",
+                filename=filename,
+                tipo=doe.tipo,
+                ref=doe.referencia,
+                dia=datetime.strptime(doe.dia, "%Y-%m-%d").date(),
+                number=doe.numero,
+                year=doe.ano,
+                link=doe.link,
+            ))
             prompt = self.rag_service.make_rag_prompt()
             ai_response = self.rag_service.generate_answer(model, prompt, file_path=file_path)
             self.history_service.create_history(HistoryCreate(
-                document_id=document_exist.id,
+                document_id=document.id,
                 ai_response=ai_response,
                 ai_model=model,
             ))
             if os.path.exists(file_path):
                 os.remove(file_path)
             return RAGResponse(response=ai_response)
-        
-        # pdf_text = self.rag_service.load_pdf(filename=filename)
-        document = self.document_service.create_document(DocumentCreate(
-            # text=pdf_text,
-            text="pdf_text",
-            filename=filename,
-            tipo=doe.tipo,
-            ref=doe.referencia,
-            dia=datetime.strptime(doe.dia, "%Y-%m-%d").date(),
-            number=doe.numero,
-            year=doe.ano,
-            link=doe.link,
-        ))
-        # apaga o arquivo baixado após salvar o documento no BD
-        # if os.path.exists(file_path):
-        #     os.remove(file_path)
-        prompt = self.rag_service.make_rag_prompt()
-        ai_response = self.rag_service.generate_answer(model, prompt, file_path=file_path)
-        self.history_service.create_history(HistoryCreate(
-            document_id=document.id,
-            ai_response=ai_response,
-            ai_model=model,
-        ))
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        return RAGResponse(response=ai_response)
+        except Exception as e:
+            raise ApplicationException
+        finally:
+            if os.path.exists(file_path):
+                os.remove(file_path)
 
     def analyze_last_doe(self, model: str) -> RAGResponse:
         last_doe = self.get_last_doe()
